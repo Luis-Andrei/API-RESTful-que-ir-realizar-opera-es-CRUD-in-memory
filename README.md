@@ -29,7 +29,7 @@ Uma API RESTful em Go que realiza operações CRUD para clientes bancários (pes
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/api-bancaria-go.git
+git clone https://github.com/Luis-Andrei/api-bancaria-go.git
 cd api-bancaria-go
 ```
 
@@ -86,4 +86,4 @@ A API estará disponível em `http://localhost:8080`
 
 ## Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes. 
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
