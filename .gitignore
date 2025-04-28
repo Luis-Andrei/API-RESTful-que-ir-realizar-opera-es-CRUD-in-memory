@@ -1,30 +1,35 @@
-# Binários para programas
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 
-# Arquivos de teste
+# Test binary, built with `go test -c`
 *.test
 
-# Arquivos de saída do compilador
+# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Arquivos de cobertura de teste
-*.prof
+# Dependency directories (remove the comment below to include it)
+vendor/
 
-# Diretórios
-/vendor/
-/tmp/
-/dist/
+# Go workspace file
+go.work
 
-# Arquivos de ambiente
-.env
-.env.local
-
-# Arquivos do IDE
+# IDE specific files
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db 

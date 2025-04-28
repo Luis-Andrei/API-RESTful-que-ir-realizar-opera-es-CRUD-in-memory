@@ -3,113 +3,146 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"sync"
 
+	"github.com/Luis-Andrei/api-users/database"
+	"github.com/Luis-Andrei/api-users/models"
 	"github.com/gorilla/mux"
-	"github.com/yourusername/crud-api/models"
 )
 
-var (
-	itens = make(map[string]models.Item)
-	mutex = &sync.RWMutex{}
-)
+type Handler struct {
+	db database.Database
+}
 
-// CriarItem lida com requisições POST para criar um novo item
-func CriarItem(w http.ResponseWriter, r *http.Request) {
-	var item models.Item
-	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
-		http.Error(w, "Erro ao decodificar o JSON: "+err.Error(), http.StatusBadRequest)
+func NewHandler(db database.Database) *Handler {
+	return &Handler{db: db}
+}
+
+type CreatePersonalClientRequest struct {
+	Name           string  `json:"name"`
+	CPF            string  `json:"cpf"`
+	InitialBalance float64 `json:"initial_balance"`
+}
+
+type CreateCorporateClientRequest struct {
+	Name           string  `json:"name"`
+	CNPJ           string  `json:"cnpj"`
+	InitialBalance float64 `json:"initial_balance"`
+}
+
+type WithdrawRequest struct {
+	Amount float64 `json:"amount"`
+}
+
+func (h *Handler) CreatePersonalClient(w http.ResponseWriter, r *http.Request) {
+	var req CreatePersonalClientRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	mutex.Lock()
-	itens[item.ID] = item
-	mutex.Unlock()
+	client := models.NewPersonalClient(req.Name, req.CPF, req.InitialBalance)
+	if err := h.db.CreatePersonalClient(client); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(client)
 }
 
-// ObterItem lida com requisições GET para recuperar um item por ID
-func ObterItem(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateCorporateClient(w http.ResponseWriter, r *http.Request) {
+	var req CreateCorporateClientRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	client := models.NewCorporateClient(req.Name, req.CNPJ, req.InitialBalance)
+	if err := h.db.CreateCorporateClient(client); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(client)
+}
+
+func (h *Handler) GetClient(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	if id == "" {
-		http.Error(w, "ID é obrigatório", http.StatusBadRequest)
-		return
-	}
 
-	mutex.RLock()
-	item, existe := itens[id]
-	mutex.RUnlock()
-
-	if !existe {
-		http.Error(w, "Item não encontrado", http.StatusNotFound)
+	client, err := h.db.GetClient(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	json.NewEncoder(w).Encode(client)
 }
 
-// AtualizarItem lida com requisições PUT para atualizar um item existente
-func AtualizarItem(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListClients(w http.ResponseWriter, r *http.Request) {
+	clients, err := h.db.ListClients()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(clients)
+}
+
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	if id == "" {
-		http.Error(w, "ID é obrigatório", http.StatusBadRequest)
+
+	var req WithdrawRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	var item models.Item
-	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
-		http.Error(w, "Erro ao decodificar o JSON: "+err.Error(), http.StatusBadRequest)
+	client, err := h.db.GetClient(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	mutex.Lock()
-	if _, existe := itens[id]; !existe {
-		mutex.Unlock()
-		http.Error(w, "Item não encontrado", http.StatusNotFound)
+	if err := client.Withdraw(req.Amount); err != nil {
+		switch err {
+		case models.ErrInvalidAmount:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case models.ErrInsufficientFunds:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case models.ErrWithdrawLimit:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
-	itens[id] = item
-	mutex.Unlock()
+
+	if err := h.db.UpdateClient(client); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	json.NewEncoder(w).Encode(client)
 }
 
-// DeletarItem lida com requisições DELETE para remover um item
-func DeletarItem(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetStatement(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	if id == "" {
-		http.Error(w, "ID é obrigatório", http.StatusBadRequest)
+
+	client, err := h.db.GetClient(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-
-	mutex.Lock()
-	if _, existe := itens[id]; !existe {
-		mutex.Unlock()
-		http.Error(w, "Item não encontrado", http.StatusNotFound)
-		return
-	}
-	delete(itens, id)
-	mutex.Unlock()
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// ObterTodosItens lida com requisições GET para recuperar todos os itens
-func ObterTodosItens(w http.ResponseWriter, r *http.Request) {
-	mutex.RLock()
-	todosItens := make([]models.Item, 0, len(itens))
-	for _, item := range itens {
-		todosItens = append(todosItens, item)
-	}
-	mutex.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(todosItens)
+	json.NewEncoder(w).Encode(client.GetStatement())
 }

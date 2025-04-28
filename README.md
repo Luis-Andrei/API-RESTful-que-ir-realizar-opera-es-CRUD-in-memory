@@ -1,67 +1,89 @@
-# API CRUD em Go
+# API Bancária em Go
 
-Uma API RESTful simples construída em Go que realiza operações CRUD com armazenamento em memória.
+Uma API RESTful em Go que realiza operações CRUD para clientes bancários (pessoais e corporativos) com armazenamento em memória.
 
 ## Funcionalidades
 
-- Operações de Criar, Ler, Atualizar e Deletar
-- Armazenamento em memória
-- Endpoints RESTful
-- Formato de requisição/resposta em JSON
+- Criação de clientes pessoais e corporativos
+- Consulta de clientes por ID
+- Listagem de todos os clientes
+- Realização de saques
+- Consulta de extrato
 
-## Endpoints da API
+## Estrutura do Projeto
 
-- `POST /itens` - Criar um novo item
-- `GET /itens` - Obter todos os itens
-- `GET /itens/{id}` - Obter um item específico
-- `PUT /itens/{id}` - Atualizar um item
-- `DELETE /itens/{id}` - Deletar um item
-
-## Estrutura do Item
-
-```json
-{
-    "id": "string",
-    "nome": "string",
-    "preco": "float64"
-}
+```
+.
+├── database/         # Implementações do banco de dados
+├── handlers/         # Manipuladores HTTP
+├── models/          # Modelos de dados
+└── main.go          # Ponto de entrada da aplicação
 ```
 
-## Como Começar
+## Requisitos
 
-1. Instale o Go (versão 1.21 ou superior)
-2. Clone este repositório
-3. Execute `go mod tidy` para instalar as dependências
-4. Execute `go run main.go` para iniciar o servidor
-5. O servidor iniciará na porta 8080
+- Go 1.16 ou superior
+- PostgreSQL (para testes)
 
-## Exemplos de Uso
+## Instalação
 
-### Criar um Item
+1. Clone o repositório:
 ```bash
-curl -X POST http://localhost:8080/itens \
--H "Content-Type: application/json" \
--d '{"id": "1", "nome": "Item Teste", "preco": 19.99}'
+git clone https://github.com/seu-usuario/api-bancaria-go.git
+cd api-bancaria-go
 ```
 
-### Obter Todos os Itens
+2. Instale as dependências:
 ```bash
-curl http://localhost:8080/itens
+go mod download
 ```
 
-### Obter um Item Específico
+3. Execute os testes:
 ```bash
-curl http://localhost:8080/itens/1
+go test ./...
 ```
 
-### Atualizar um Item
+## Configuração do Banco de Dados para Testes
+
+1. Instale o PostgreSQL
+2. Crie um banco de dados de teste:
+```sql
+CREATE DATABASE bank_test;
+```
+3. Configure as variáveis de ambiente:
 ```bash
-curl -X PUT http://localhost:8080/itens/1 \
--H "Content-Type: application/json" \
--d '{"id": "1", "nome": "Item Atualizado", "preco": 29.99}'
+export TEST_DB_HOST=localhost
+export TEST_DB_PORT=5432
+export TEST_DB_USER=postgres
+export TEST_DB_PASSWORD=sua_senha
+export TEST_DB_NAME=bank_test
 ```
 
-### Deletar um Item
+## Executando a Aplicação
+
 ```bash
-curl -X DELETE http://localhost:8080/itens/1
-``` 
+go run main.go
+```
+
+A API estará disponível em `http://localhost:8080`
+
+## Endpoints
+
+- `POST /api/clients/personal` - Cria um cliente pessoal
+- `POST /api/clients/corporate` - Cria um cliente corporativo
+- `GET /api/clients/:id` - Obtém um cliente por ID
+- `GET /api/clients` - Lista todos os clientes
+- `POST /api/clients/:id/withdraw` - Realiza um saque
+- `GET /api/clients/:id/statement` - Obtém o extrato do cliente
+
+## Contribuição
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes. 
